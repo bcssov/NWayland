@@ -162,7 +162,18 @@ namespace Avalonia.Wayland
             TransparencyLevelChanged?.Invoke(transparencyLevel);
         }
 
-        public virtual void Show(bool activate, bool isDialog) => DoPaint();
+        public virtual void Show(bool activate, bool isDialog)
+        {
+            // Attempt to fix attached a buffer before configure event
+            if (XdgSurfaceConfigureSerial == 0)
+            {
+                WlSurface?.Attach(null, 0, 0);
+                WlSurface?.Commit();
+                return;
+            }
+
+            DoPaint();
+        }
 
         public void Hide()
         {
@@ -229,7 +240,7 @@ namespace Avalonia.Wayland
             if (_frameCallback != null)
             {
                 _frameCallback.Events = this;
-            }            
+            }
         }
 
         private void DoResize(Size size)
@@ -244,8 +255,17 @@ namespace Avalonia.Wayland
 
         private void DoPaint()
         {
+            // Attempt to fix attached a buffer before configure event
+            if (XdgSurfaceConfigureSerial == 0)
+            {
+                return;
+            }
+
             if (PendingSize != Size.Empty && PendingSize != ClientSize)
+            {
                 DoResize(PendingSize);
+            }
+
             Paint?.Invoke(new Rect(ClientSize));
         }
 
